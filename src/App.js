@@ -4,18 +4,26 @@ import './App.css';
 import firebase from 'firebase/app';
 import 'firebase/firestore';
 import 'firebase/auth';
-import 'firebase/analytics';
-
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useCollectionData } from 'react-firebase-hooks/firestore';
 
+const { TextAnalyticsClient, AzureKeyCredential } = require("@azure/ai-text-analytics");
+
+
 firebase.initializeApp({
-  // your config
+  apiKey: "AIzaSyDcuAagIScxjfsi_A_PhmlGbKSeTHE4sEo",
+  authDomain: "acmc-298f1.firebaseapp.com",
+  projectId: "acmc-298f1",
+  storageBucket: "acmc-298f1.appspot.com",
+  messagingSenderId: "334002705680",
+  appId: "1:334002705680:web:b3744d94e4463b956b4195"
 })
+
+const client = new TextAnalyticsClient("https://acmc-resources.cognitiveservices.azure.com/", new AzureKeyCredential("f9afa602507b41c986fa6f6d42de0b1a"));
 
 const auth = firebase.auth();
 const firestore = firebase.firestore();
-const analytics = firebase.analytics();
+
 
 
 function App() {
@@ -23,9 +31,15 @@ function App() {
   const [user] = useAuthState(auth);
 
   return (
-    <div className="App">
+    <>
+        <div className="App">
       <header>
-        <h1>⚛️🔥💬</h1>
+        <img src="https://swimburger.net/media/ppnn3pcl/azure.png"
+        width={50}
+        height={50}
+        alt="Azure Logo"
+        className='image'
+        />
         <SignOut />
       </header>
 
@@ -34,20 +48,26 @@ function App() {
       </section>
 
     </div>
+    </>
   );
 }
 
 function SignIn() {
 
-  const signInWithGoogle = () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
+  const signInWithMs = () => {
+    let provider = new firebase.auth.OAuthProvider('microsoft.com');
+      provider.setCustomParameters({
+     prompt: "consent",
+
+})
     auth.signInWithPopup(provider);
   }
 
   return (
     <>
-      <button className="sign-in" onClick={signInWithGoogle}>Sign in with Google</button>
-      <p>Do not violate the community guidelines or you will be banned for life!</p>
+      <button className="sign-in" onClick={signInWithMs}>Sign in with Microsoft</button>
+      {/* <button className="sign-in" onClick={signInWithMs}>Sign in with Google</button> */}
+     
     </>
   )
 
@@ -69,21 +89,45 @@ function ChatRoom() {
 
   const [formValue, setFormValue] = useState('');
 
-
+  
   const sendMessage = async (e) => {
+
     e.preventDefault();
-
-    const { uid, photoURL } = auth.currentUser;
-
+  
+    // Analyze sentiment
+    const response =  await client.analyzeSentiment([
+      formValue
+    ]);
+  
+    if(response[0].sentiment === "negative") {
+      alert("Message blocked due to negative sentiment ");
+      return;
+    }
+  
+    // Check for toxic content
+    const toxicityResponse = await client.analyzeSentiment([
+      formValue  
+    ]);
+    
+    if(toxicityResponse.isToxic) {
+      alert("Message blocked due to toxic content");
+      return;
+    }
+  
+    // message is ok, continue with send
+  
+    const { uid } = auth.currentUser;
+  
     await messagesRef.add({
+      username: auth.currentUser.displayName, 
       text: formValue,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      uid,
-      photoURL
+      uid  
     })
-
+  
     setFormValue('');
     dummy.current.scrollIntoView({ behavior: 'smooth' });
+  
   }
 
   return (<>
@@ -107,14 +151,21 @@ function ChatRoom() {
 
 
 function ChatMessage(props) {
-  const { text, uid, photoURL } = props.message;
+  const { text, uid, username} = props.message;
 
   const messageClass = uid === auth.currentUser.uid ? 'sent' : 'received';
 
-  return (<>
+  return (
+  <>
+
+   <div>
     <div className={`message ${messageClass}`}>
-      <img src={photoURL || 'https://api.adorable.io/avatars/23/abott@adorable.png'} />
+    <div className='usernamecontainer'>
+    <span className='username'>{username}</span>
+    </div> 
       <p>{text}</p>
+    </div>
+    
     </div>
   </>)
 }
