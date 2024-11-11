@@ -1,7 +1,3 @@
-# React Firebase Super Chat
+# React Firebase Super Chat with content Moderation 
 
-A simple fullstack chat demo with React and Firebase. 
-
-Watch on full [React Firebase Chat Tutorial](https://youtu.be/zQyrwxMPm88) on YouTube. 
-
-[Live demo](https://fireship-demos.web.app/)
+Huge thanks to Jeff for providing the template to add Microsoft  Azure Authentication and content Moderation Demo
